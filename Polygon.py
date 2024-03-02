@@ -1,5 +1,19 @@
 import numpy as np
-import matplotlib.pyplot as plt
+import random
+
+def initialize_a_polygon():
+    num_vertices = random.randint(3, 10)
+
+    theta = 2 * np.pi / num_vertices
+    vertices = []
+    for i in range(num_vertices):
+        r_vertex = np.sqrt(1/np.pi) + random.uniform(-0.1, 0.1)
+        theta_vertex = i*theta + random.uniform(-0.001, 0.001)
+        x = r_vertex * np.cos(theta_vertex)
+        y = r_vertex * np.sin(theta_vertex)
+        vertices.append(Vertex([x, y]))
+    return Polygon(vertices)
+
 class Vertex:
     def __init__(self, position):
         self.position_ = np.array(position)
@@ -17,12 +31,13 @@ class Polygon:
         self.area_ = None
         self.P0_ = 3.5
         self.A0_ = 1
+        self.kA_ = 10
+        self.kP_ = 1
         self.energy_ = None
         self.stress_ = np.zeros((2,2))
         self.do_reconnections()
-        self.compute_perimeter()
-        self.compute_area()
         self.compute_forces()
+        self.compute_stress()
         return
     
     def compute_perimeter(self):
@@ -40,6 +55,7 @@ class Polygon:
                                    self.vertices_[i].position_)
         self.area_ = 0.5*self.area_
         return
+    
     def do_reconnections(self):
         indices_to_remove = []
         for i in range(len(self.vertices_)):
@@ -54,6 +70,9 @@ class Polygon:
         return
 
     def compute_forces(self):
+        # Calculate current area and perimeter
+        self.compute_perimeter()
+        self.compute_area()
 
         for i in range(len(self.vertices_)):
             
@@ -83,19 +102,16 @@ class Polygon:
             # Calculate the force on the vertex
             self.vertices_[i].force_ = np.add(
                     self.vertices_[i].force_,
-                    np.multiply(self.A0_ - self.area_, del_A_i))
+                    np.multiply(self.A0_ - self.area_, self.kA_ * del_A_i))
             self.vertices_[i].force_ = np.add(
                     self.vertices_[i].force_,
                     np.multiply(self.P0_ - self.perimeter_, del_P_i))
-
         return
     
-    def plot_polygon(self):
-        # plot lines between consecutive pairs of vertices
+    def compute_stress(self):
+        self.stress_ = np.zeros((2,2))
         for i in range(len(self.vertices_)):
-            plt.plot([self.vertices_[i-1].position_[0],
-                      self.vertices_[i].position_[0]],
-                     [self.vertices_[i-1].position_[1],
-                      self.vertices_[i].position_[1]],
-                     'k')
+            self.stress_ = np.add(self.stress_,
+                                  np.outer(self.vertices_[i].position_,
+                                           self.vertices_[i].force_))
         return
