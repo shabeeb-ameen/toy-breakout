@@ -1,6 +1,7 @@
 import numpy as np
 import random
 
+
 def initialize_a_polygon(P0 = 3.7):
     num_vertices = random.randint(5, 8)
     theta = 2 * np.pi / num_vertices
@@ -11,6 +12,11 @@ def initialize_a_polygon(P0 = 3.7):
         x = r_vertex * np.cos(theta_vertex)
         y = r_vertex * np.sin(theta_vertex)
         vertices.append(Vertex([x, y]))
+
+    # the first vertex connects to a linker spring.
+    # Some other vertex, chosen at random, is fixed.
+    vertices[0].is_linked_ = True
+    vertices[random.randint(1, num_vertices-1)].is_fixed_ = True
     return Polygon(vertices,P0)
 
 class Vertex:
@@ -20,17 +26,21 @@ class Vertex:
         self.velocity_ = np.zeros(2)
         self.is_fixed_ = False
         self.is_linked_ = False
+        self.link_force_ = np.zeros(2)
         return
 
+# Link
 class Polygon:
     def __init__(self, vertices, P0):
         self.Lth_ = 0.001
-        self.vertices_ = vertices 
+        self.vertices_ = vertices
+        self.fixed_vertex_index_ = None
+        self.linked_vertex_index_ = None
         self.perimeter_ = None
         self.area_ = None
         self.P0_ = P0
         self.A0_ = 1
-        self.kA_ = 10
+        self.kA_ = 1
         self.kP_ = 1
         self.energy_ = None
         self.stress_ = np.zeros((2,2))
@@ -68,13 +78,17 @@ class Polygon:
             del self.vertices_[i]        
         return
 
+    # Calculates forces on polygon vertices using only the polygon geometry
+    # This information is stored in vertex.force_
+    # For the vertex that is connected to a linker spring, 
+    # we will calculate and store the linker force separately (in vertex._link_force_)
+
     def compute_forces(self):
         # Calculate current area and perimeter
         self.compute_perimeter()
         self.compute_area()
 
-        for i in range(len(self.vertices_)):
-            
+        for i in range(len(self.vertices_)):  
             # initialize forces to zero
             self.vertices_[i].force_ = np.zeros(2)
             # Calculate area and perimeter derivatives.
@@ -107,6 +121,7 @@ class Polygon:
                     np.multiply(self.P0_ - self.perimeter_, del_P_i))
         return
     
+    # compute_stress: This calculates the polygon stress based only on the polygon-
     def compute_stress(self):
         self.stress_ = np.zeros((2,2))
         for i in range(len(self.vertices_)):

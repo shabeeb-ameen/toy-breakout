@@ -6,9 +6,10 @@ def calculateForceVelocityProjections(polygon):
     power = 0
 
     for i in range(len(polygon.vertices_)):
-        ff += np.dot(polygon.vertices_[i].force_,polygon.vertices_[i].force_)
-        vv += np.dot(polygon.vertices_[i].velocity_,polygon.vertices_[i].velocity_)
-        power += np.dot(polygon.vertices_[i].force_,polygon.vertices_[i].velocity_)
+        if not polygon.vertices_[i].is_fixed_:
+            ff += np.dot(polygon.vertices_[i].force_,polygon.vertices_[i].force_)
+            vv += np.dot(polygon.vertices_[i].velocity_,polygon.vertices_[i].velocity_)
+            power += np.dot(polygon.vertices_[i].force_,polygon.vertices_[i].velocity_)
 
     return ff, vv, power
 
@@ -19,8 +20,8 @@ def FIREminimize(polygon):
     FIRE_acoef0 = 0.1
     FIRE_acoef = 0.1
     FIRE_falpha = 0.99
-    FIRE_dtmax = 1e-2
-    FIRE_dt = 1e-3
+    FIRE_dtmax = 5e-3
+    FIRE_dt = 5e-4
     FIRE_equilibrium_tolerance = 5e-30
     FIRE_equilibrium_count = 0
     FIRE_itermax = 1000000
@@ -33,22 +34,23 @@ def FIREminimize(polygon):
         
         # Update positions of polygon vertices
         for j in range(len(polygon.vertices_)):
-            polygon.vertices_[j].position_ = np.add(polygon.vertices_[j].position_,
-                                                    np.multiply(FIRE_dt,
-                                                                polygon.vertices_[j].velocity_))
+            if not polygon.vertices_[j].is_fixed_:
+
+                polygon.vertices_[j].position_ = np.add(polygon.vertices_[j].position_,
+                                                        np.multiply(FIRE_dt,
+                                                                    polygon.vertices_[j].velocity_))
 
         
         # Calculate forces on polygon vertices
         polygon.do_reconnections()
-        polygon.compute_perimeter()
-        polygon.compute_area()
         polygon.compute_forces()
 
         # Update velocities of polygon vertices
         for j in range(len(polygon.vertices_)):
-            polygon.vertices_[j].velocity_ = np.add(polygon.vertices_[j].velocity_,
-                                                    np.multiply(FIRE_dt,
-                                                                polygon.vertices_[j].force_))
+            if not polygon.vertices_[j].is_fixed_:
+                polygon.vertices_[j].velocity_ = np.add(polygon.vertices_[j].velocity_,
+                                                        np.multiply(FIRE_dt,
+                                                                    polygon.vertices_[j].force_))
 
         # Step 2: Calculate ff, vv, and power
         ff, vv, power = calculateForceVelocityProjections(polygon)
@@ -86,10 +88,11 @@ def FIREminimize(polygon):
             force_multiple = np.sqrt(vv/ff)
 
             for j in range(len(polygon.vertices_)):
-                polygon.vertices_[j].velocity_ = np.add(np.multiply((1 - FIRE_acoef),
-                                                                    polygon.vertices_[j].velocity_),
-                                                        np.multiply(force_multiple * FIRE_acoef, 
-                                                                    polygon.vertices_[j].force_))
+                if not polygon.vertices_[j].is_fixed_:
+                    polygon.vertices_[j].velocity_ = np.add(np.multiply((1 - FIRE_acoef),
+                                                                        polygon.vertices_[j].velocity_),
+                                                            np.multiply(force_multiple * FIRE_acoef, 
+                                                                        polygon.vertices_[j].force_))
         else:
             FIRE_n_since_positive=0
             FIRE_acoef = FIRE_acoef0
