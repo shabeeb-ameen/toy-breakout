@@ -1,9 +1,8 @@
 import numpy as np
 import random
 
-def initialize_a_polygon():
-    num_vertices = random.randint(3, 10)
-
+def initialize_a_polygon(P0 = 3.7):
+    num_vertices = random.randint(5, 8)
     theta = 2 * np.pi / num_vertices
     vertices = []
     for i in range(num_vertices):
@@ -12,7 +11,7 @@ def initialize_a_polygon():
         x = r_vertex * np.cos(theta_vertex)
         y = r_vertex * np.sin(theta_vertex)
         vertices.append(Vertex([x, y]))
-    return Polygon(vertices)
+    return Polygon(vertices,P0)
 
 class Vertex:
     def __init__(self, position):
@@ -24,12 +23,12 @@ class Vertex:
         return
 
 class Polygon:
-    def __init__(self, vertices):
+    def __init__(self, vertices, P0):
         self.Lth_ = 0.001
         self.vertices_ = vertices 
         self.perimeter_ = None
         self.area_ = None
-        self.P0_ = 3.5
+        self.P0_ = P0
         self.A0_ = 1
         self.kA_ = 10
         self.kP_ = 1
@@ -53,7 +52,7 @@ class Polygon:
         for i in range(len(self.vertices_)):
             self.area_ += np.cross(self.vertices_[i-1].position_,
                                    self.vertices_[i].position_)
-        self.area_ = 0.5*self.area_
+        self.area_ = 0.5 * self.area_
         return
     
     def do_reconnections(self):
